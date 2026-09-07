@@ -1,0 +1,165 @@
+openapi: 3.0.3
+info:
+  title: Multi-Device Data Ingestion API
+  description: >
+    Ingests data from multiple device types, normalizes it into a common internal
+    representation, and exposes it for downstream processing.
+  version: 1.0.0
+servers:
+  - url: /
+tags:
+  - name: Ingestion
+    description: Generic device data ingestion
+  - name: Devices
+    description: Read access to normalized device data
+paths:
+  /api/v1/ingest/{deviceType}:
+    post:
+      tags:
+        - Ingestion
+      operationId: ingestDeviceData
+      summary: Ingest a raw payload from a device
+      parameters:
+        - name: deviceType
+          in: path
+          required: true
+          description: Logical device type, e.g. "temperature" or "vibration"
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RawPayload'
+      responses:
+        '202':
+          description: Payload accepted and normalized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IngestResponse'
+        '400':
+          description: Unknown device type or malformed/invalid payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/devices/{deviceId}/readings:
+    get:
+      tags:
+        - Devices
+      operationId: getDeviceReadings
+      summary: List normalized readings for a device, ordered by event time
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 100
+      responses:
+        '200':
+          description: Readings for the device, oldest first
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Reading'
+  /api/v1/devices/{deviceId}/stats:
+    get:
+      tags:
+        - Devices
+      operationId: getDeviceStats
+      summary: Running downstream statistics for a device
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Stats snapshot for the device
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceStats'
+components:
+  schemas:
+    RawPayload:
+      type: object
+      description: Device-specific raw payload; shape depends on deviceType.
+      additionalProperties: true
+    IngestResponse:
+      type: object
+      required: [deviceType, readingsAccepted]
+      properties:
+        deviceType:
+          type: string
+        readingsAccepted:
+          type: integer
+          format: int32
+    Reading:
+      type: object
+      description: Common internal representation shared by every device type.
+      required: [deviceId, deviceType, eventTime, ingestTime, value, unit, late]
+      properties:
+        deviceId:
+          type: string
+        deviceType:
+          type: string
+        eventTime:
+          type: string
+          format: date-time
+        ingestTime:
+          type: string
+          format: date-time
+        value:
+          type: number
+          format: double
+        unit:
+          type: string
+        late:
+          type: boolean
+        attributes:
+          type: object
+          additionalProperties: true
+    DeviceStats:
+      type: object
+      required: [deviceId, count, lateCount, droppedCount, min, max, average]
+      properties:
+        deviceId:
+          type: string
+        count:
+          type: integer
+          format: int64
+        lateCount:
+          type: integer
+          format: int64
+        droppedCount:
+          type: integer
+          format: int64
+        min:
+          type: number
+          format: double
+        max:
+          type: number
+          format: double
+        average:
+          type: number
+          format: double
+    ErrorResponse:
+      type: object
+      required: [errors]
+      properties:
+        errors:
+          type: array
+          items:
+            type: string

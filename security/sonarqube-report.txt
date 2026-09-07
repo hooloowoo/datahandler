@@ -1,0 +1,42 @@
+SonarQube Analysis Report
+=========================
+Project: datahandler
+Server: http://localhost:9000
+Dashboard: http://localhost:9000/dashboard?id=datahandler
+Analysis date: 2026-09-07T18:56:49+0200
+
+Quality Gate: OK
+  - new_coverage: 83.3 (>= 80 required)              -> OK
+  - new_duplicated_lines_density: 0.0 (<= 3 allowed)  -> OK
+  - new_violations: 0 (<= 0 allowed)                  -> OK
+
+Measures
+  - Bugs:                 0
+  - Vulnerabilities:      0
+  - Code Smells:          0
+  - Security Hotspots:    0
+  - Coverage:             96.0%
+  - Duplicated Lines:     0.0%
+  - Lines of Code:        745
+  - Reliability Rating:   1.0 (A)
+  - Security Rating:      1.0 (A)
+  - Maintainability (Sqale) Rating: 1.0 (A)
+  - Technical Debt (Sqale Index): 0
+
+Open Issues: 0 (all 11 previously reported issues were fixed prior to this scan)
+
+Notes
+  - JaCoCo XML report (target/site/jacoco/jacoco.xml) was picked up automatically
+    for coverage; generated-source files under net.kaulics.datahandler.api
+    (openapi-generator output) are excluded from coverage/analysis since they are
+    not part of the project's own source tree.
+  - Raw API responses backing this summary are not stored here; re-run the
+    command below and query http://localhost:9000/api/issues/search,
+    /api/measures/component and /api/qualitygates/project_status for live data.
+
+Command used:
+  mvn clean verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar \
+    -Dsonar.projectKey=datahandler \
+    -Dsonar.projectName='datahandler' \
+    -Dsonar.host.url=http://localhost:9000 \
+    -Dsonar.token=****
