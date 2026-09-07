@@ -22,8 +22,12 @@ flowchart LR
     S -- "looks up by deviceType" --> R[NormalizerRegistry]
     R --> TN[TemperatureNormalizer]
     R --> VN[VibrationNormalizer]
-    TN -- "1 NormalizedReading" --> P
-    VN -- "N NormalizedReadings\n(1 per sample)" --> P
+    TN -- "1 NormalizedReading" --> MQ
+    VN -- "N NormalizedReadings\n(1 per sample)" --> MQ
+
+    MQ[ReadingMessageQueue<br/>JMS producer] -- "JSON message" --> BROKER[(Embedded Artemis broker<br/>queue: readings)]
+    BROKER -- "@JmsListener" --> MQ
+    MQ --> P
 
     P[ReadingPipeline] --> O[OrderingTracker<br/>per-device watermark]
     O -- "ON_TIME / LATE" --> ST[ReadingStore<br/>sorted by event time]
@@ -44,14 +48,17 @@ compiled into server interfaces at build time by the `openapi-generator-maven-pl
 (`spring` generator, `delegatePattern=true`). For each OpenAPI tag this produces, per
 request, a generated `@RestController` (e.g. `IngestionApiController`) that handles all
 routing/binding and delegates to a `*ApiDelegate` interface (e.g. `IngestionApiDelegate`).
-We implement only the delegate interfaces (`IngestionApiDelegateImpl`,
-`DevicesApiDelegateImpl`) as plain `@Service` beans — Spring wires them into the generated
-controllers automatically. Generated model classes (`Reading`, `DeviceStats`,
+We implement only the delegate interfaces (`IngestionApiDelegateImpl` in
+`net.kaulics.datahandler.ingestion`, `DevicesApiDelegateImpl` in
+`net.kaulics.datahandler.delegate`) as plain `@Service` beans — Spring wires them into the
+generated controllers automatically. Generated model classes (`Reading`, `DeviceStats`,
 `IngestResponse`, `ErrorResponse`) live at the API boundary in `net.kaulics.datahandler.api`;
 our internal domain model (`NormalizedReading`, `DeviceStats` in `net.kaulics.datahandler.model`)
 stays independent of the API schema, with small mapping functions in `DevicesApiDelegateImpl`
 converting between the two. This keeps the OpenAPI spec as the single source of truth for the
-HTTP contract without leaking generated types into the domain/pipeline layers.
+HTTP contract without leaking generated types into the domain/pipeline layers. Domain-specific
+errors (e.g. `UnknownDeviceTypeException`) live in their own `net.kaulics.datahandler.exception`
+package and are translated into 4xx responses by `ApiExceptionHandler`.
 
 **Request flow**: a device posts its raw, device-specific JSON payload to
 `POST /api/v1/ingest/{deviceType}`. The generated `IngestionApiController` binds the request and
